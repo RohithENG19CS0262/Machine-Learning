@@ -1,0 +1,60 @@
+import tensorflow as tf
+from tensorflow import keras
+import numpy as np
+import matplotlib.pyplot as plt
+from google.colab import files
+from keras.preprocessing import image
+from PIL import Image
+import cv2
+import warnings
+warnings.filterwarnings('ignore')
+# Loading Data
+handwriting_mnist = keras.datasets.mnist
+(train_images,train_labels),(test_images,test_labels) = handwriting_mnist.load_data()
+train_images = train_images.reshape(len(train_images),28,28,1)
+test_images = test_images.reshape(len(test_images),28,28,1)
+# Test Data Visualization
+fig = plt.figure(figsize=(8, 8))
+fig.subplots_adjust(left=0, right=1, bottom=0, top=1, hspace=0.05, wspace=0.05)
+
+# plot the digits: each image is 28x28 pixels
+for i in range(64):
+    ax = fig.add_subplot(8, 8, i + 1, xticks=[], yticks=[])
+    ax.imshow(test_images[i].reshape(28,28), cmap=plt.cm.binary, interpolation='nearest')
+    
+    # label the image with the target value
+    ax.text(0, 7, str(test_labels[i]))
+plt.show()
+# Creating model
+model = keras.models.Sequential([
+                                 keras.layers.Conv2D(64,(3,3),activation='relu',input_shape=(28,28,1)),
+                                 keras.layers.MaxPool2D(2,2),
+                                 keras.layers.Flatten(),
+                                 keras.layers.Dense(28,activation='relu'),
+                                 keras.layers.Dense(10,activation='softmax')
+])
+#############################################################   Model Prediction   #############################################################
+# Model Prediction
+uploaded = files.upload()
+
+for fn in uploaded.keys():
+  path = '/content/' + fn
+  img = image.load_img(path)
+  x = image.img_to_array(img)
+  x = cv2.cvtColor(x, cv2.COLOR_BGR2GRAY)
+  plt.imshow(x,cmap='gray')
+  plt.show()
+  x = cv2.resize(np.array(x), (28, 28))
+  x = x.reshape(28,28,1)
+  x = np.expand_dims(x, axis=0)
+
+  class_label = model.predict(x)
+  print("Predicted Value is:",np.where(class_label[0]==max(class_label[0]))[0])
+
+print(model.summary())
+# Model Compile
+model.compile(optimizer='adam',metrics=['acc'],loss='sparse_categorical_crossentropy')
+# Model Fitting
+model.fit(train_images,train_labels,epochs=10)
+# Model Evaluation
+model.evaluate(test_images,test_labels)
